@@ -36,7 +36,7 @@ define Package/ruby/Default
   SUBMENU:=Ruby
   SECTION:=lang
   CATEGORY:=Languages
-  TITLE:=Ruby scripting language
+  TITLE:=Ruby scripting language (1.9.3)
   URL:=http://www.ruby-lang.org/
 endef
 
@@ -114,7 +114,7 @@ endef
 define Package/ruby-gems
 $(call Package/ruby/Default)
   TITLE:=Ruby gems packet management
-  DEPENDS:=ruby +ruby-yaml +ruby-zlib +ruby-openssl +ruby-webrick +ruby-erb
+  DEPENDS:=ruby +ruby-yaml +ruby-zlib +ruby-openssl +ruby-webrick +ruby-erb +ruby-enc
 endef
 
 define Package/ruby-irb
