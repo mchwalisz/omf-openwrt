@@ -12,5 +12,3 @@ There are over [2000 packages](http://downloads.openwrt.org/backfire/10.03.1/brc
  * [EmEmChat](https://github.com/awilliams/EmEmChat) - A websocket server & html/javascript client chat app using em-websocket and lungo.js
 
 ### [Build HOWTO](https://github.com/awilliams/ruby-openwrt/wiki)
-
-![Jazztel HG536](https://github.com/awilliams/ruby-openwrt/raw/master/docs/hg_536_plus.JPG)
