@@ -308,9 +308,10 @@ define Package/ruby-core/install
 endef
 
 define Package/ruby-dev/install
-	$(INSTALL_DIR) $(1)/usr/lib/ruby/$(PKG_LIBVER)/include
-	$(CP) $(PKG_INSTALL_DIR)/usr/include/ruby-$(PKG_LIBVER)/ruby $(1)/usr/lib/ruby/$(PKG_LIBVER)/include/
-	$(CP) $(PKG_INSTALL_DIR)/usr/include/ruby-$(PKG_LIBVER)/ruby.h $(1)/usr/lib/ruby/$(PKG_LIBVER)/include/ruby.h
+	$(INSTALL_DIR) $(1)/usr/include/ruby/$(PKG_LIBVER)
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/ruby-$(PKG_LIBVER)/mips-linux $(1)/usr/include/ruby/$(PKG_LIBVER)/mips-linux
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/ruby-$(PKG_LIBVER)/ruby $(1)/usr/include/ruby/$(PKG_LIBVER)/
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/ruby-$(PKG_LIBVER)/ruby.h $(1)/usr/include/ruby/$(PKG_LIBVER)/ruby.h
 endef
 
 define Package/ruby-cgi/install
