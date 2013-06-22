@@ -1,14 +1,10 @@
-# Ruby Eventmachine package for OpenWrt Barrier Braker #
+# Ruby Feed for OMF on the OpenWrt Barrier Braker #
 
 *OpenWrt is described as a Linux distribution for embedded devices. Instead of trying to create a single, static firmware, OpenWrt provides a fully writable filesystem with package management.* [-  OpenWrt](https://openwrt.org/)
 
-There are over [2000 packages](http://downloads.openwrt.org/backfire/10.03.1/brcm63xx/packages/) available for OpenWrt. Here I provide a few Ruby packages, specifically for a **websocket server**.
+There are over [2000 packages](http://downloads.openwrt.org/backfire/10.03.1/brcm63xx/packages/) available for OpenWrt.
 
 ## ruby-openwrt packages:
 
- * Standard OpenWrt Ruby 1.9.2-p0 packages, with an additional *ruby-enc-utf* package. This package provides only the UTF encodings, instead of the default *ruby-enc* package (2+MB).
- * [eventmachine](https://github.com/awilliams/eventmachine) - "Fast, simple event-processing library for Ruby programs"
- * [em-websocket](https://github.com/awilliams/em-websocket) - "EventMachine based WebSocket server" (slightly modified removing dependency on Addressable, and modified file encodings)
- * [EmEmChat](https://github.com/awilliams/EmEmChat) - A websocket server & html/javascript client chat app using em-websocket and lungo.js
-
-### [Build HOWTO](https://github.com/awilliams/ruby-openwrt/wiki)
+ * Standard OpenWrt Ruby 1.9.3-p286 packages, with an additional *ruby-dev* package. This package provides the ruby header files on the target device.
+ * [eventmachine](https://github.com/eventmachine/eventmachine) - "Fast, simple event-processing library for Ruby programs"
