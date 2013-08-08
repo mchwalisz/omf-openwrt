@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar ns="http://schema.mytestbed.net/omf/6.0/protocol" xmlns="http://relaxng.org/ns/structure/1.0">
+  <start>
+    <choice>
+      <ref name="create"/>
+      <ref name="configure"/>
+      <ref name="request"/>
+      <ref name="release"/>
+      <ref name="inform"/>
+      <ref name="env"/>
+    </choice>
+  </start>
+  <define name="common_elements">
+    <interleave>
+      <optional>
+        <attribute name="mid"/>
+      </optional>
+      <element name="ts">
+        <text/>
+      </element>
+      <optional>
+        <element name="src">
+          <text/>
+        </element>
+      </optional>
+      <optional>
+        <element name="replyto">
+          <text/>
+        </element>
+      </optional>
+      <optional>
+        <element name="props">
+          <zeroOrMore>
+            <ref name="property"/>
+          </zeroOrMore>
+        </element>
+      </optional>
+      <optional>
+        <element name="guard">
+          <zeroOrMore>
+            <ref name="property"/>
+          </zeroOrMore>
+        </element>
+      </optional>
+    </interleave>
+  </define>
+  <define name="anything">
+    <choice>
+      <text/>
+      <element>
+        <anyName/>
+        <optional>
+          <attribute name="type"/>
+        </optional>
+        <zeroOrMore>
+          <choice>
+            <text/>
+            <ref name="anything"/>
+          </choice>
+        </zeroOrMore>
+      </element>
+    </choice>
+  </define>
+  <define name="property">
+    <element>
+      <anyName/>
+      <optional>
+        <attribute name="type"/>
+      </optional>
+      <zeroOrMore>
+        <ref name="anything"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="create">
+    <element name="create">
+      <interleave>
+        <ref name="common_elements"/>
+        <element name="rtype">
+          <text/>
+        </element>
+      </interleave>
+    </element>
+  </define>
+  <define name="configure">
+    <element name="configure">
+      <ref name="common_elements"/>
+    </element>
+  </define>
+  <define name="request">
+    <element name="request">
+      <ref name="common_elements"/>
+    </element>
+  </define>
+  <define name="release">
+    <element name="release">
+      <interleave>
+        <ref name="common_elements"/>
+        <optional>
+          <element name="res_id">
+            <text/>
+          </element>
+        </optional>
+      </interleave>
+    </element>
+  </define>
+  <define name="inform">
+    <element name="inform">
+      <interleave>
+        <ref name="common_elements"/>
+        <optional>
+          <element name="cid">
+            <text/>
+          </element>
+        </optional>
+        <element name="itype">
+          <choice>
+            <value>CREATION.OK</value>
+            <value>CREATION.FAILED</value>
+            <value>STATUS</value>
+            <value>RELEASED</value>
+            <value>ERROR</value>
+            <value>WARN</value>
+          </choice>
+        </element>
+      </interleave>
+    </element>
+  </define>
+  <define name="env">
+    <element name="env">
+      <choice>
+        <ref name="create"/>
+        <ref name="configure"/>
+        <ref name="request"/>
+        <ref name="release"/>
+        <ref name="inform"/>
+      </choice>
+    </element>
+  </define>
+</grammar>

@@ -1,0 +1,92 @@
+#!/usr/bin/env ruby
+BIN_DIR = File.dirname(File.symlink?(__FILE__) ? File.readlink(__FILE__) : __FILE__)
+TOP_DIR = File.join(BIN_DIR, '..')
+$: << File.join(TOP_DIR, 'lib')
+
+DESCR = %{
+Monitor a set of resources (topics) and print all observed messages.
+
+If the 'follow-children' flag is set, automatically add all resources
+created by the monitored resources to the monitor set. Please note
+that there will be a delay until the new monitors are in place which
+can result in missed messages.
+}
+
+require 'optparse'
+require 'omf_common'
+
+OP_MODE = :development
+
+opts = {
+  communication: {
+    #url: 'xmpp://srv.mytestbed.net',
+    #auth: {}
+  },
+  eventloop: { type: :em},
+  logging: {
+    level: 'info'
+  }
+}
+
+observed_topic = nil
+$follow_children = true
+$debug = false
+
+op = OptionParser.new
+op.banner = "Usage: #{op.program_name} [options] topic1 topic2 ...\n#{DESCR}\n"
+op.on '-c', '--comms-url URL', "URL of communication server (e.g. xmpp://my.server.com)" do |url|
+  opts[:communication][:url] = url
+end
+op.on '-f', "--[no-]follow-children", "Follow all newly created resources [#{$follow_children}]" do |flag|
+  $follow_children = flag
+end
+op.on '-d', '--debug', "Set log level to DEBUG" do
+  opts[:logging][:level] = 'debug'
+  $debug = true
+end
+op.on_tail('-h', "--help", "Show this message") { $stderr.puts op; exit }
+observed_topics = op.parse(ARGV)
+
+unless opts[:communication][:url] && observed_topics
+  $stderr.puts "ERROR: Missing declaration of --comms-url or topics to follow\n\n"
+  $stderr.puts op
+  exit(-1)
+end
+
+$observed_topics = {}
+
+def observe(tname, comm)
+  return if $observed_topics.key? tname
+
+  info "Observing '#{tname}'"
+  $observed_topics[tname] = true
+  comm.subscribe(tname) do |topic|
+    topic.on_message do |msg|
+      ts = Time.now.strftime('%H:%M:%S')
+      puts "#{ts}  #{msg.type}(#{msg.itype})  #{$debug ? msg.inspect : ''}"
+      #puts "  #{topic.id}"
+      if (src_topic = (msg.src.is_a?(OmfCommon::Comm::Topic) ? msg.src.id : msg.src)) == topic.id
+        puts "  #{topic.id}"
+      else
+        puts "  #{src_topic} via #{topic.id}"
+      end
+      msg.each_property do |name, value|
+        puts "    #{name}: #{value}"
+      end
+      puts "------"
+
+      if $follow_children && msg.itype == 'creation_ok'
+        #puts ">>>>>> #{msg}"
+        observe(msg[:res_id], comm)
+      end
+    end
+  end
+end
+
+OmfCommon.init(OP_MODE, opts) do |el|
+  OmfCommon.comm.on_connected do |comm|
+    observed_topics.each do |topic|
+      observe(topic, comm)
+    end
+  end
+end

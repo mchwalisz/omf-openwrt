@@ -1,0 +1,139 @@
+#!/usr/bin/env ruby
+
+abort "Please use Ruby 1.9.3 or higher" if RUBY_VERSION < "1.9.3"
+
+require 'optparse'
+require 'erb'
+require 'socket'
+
+require 'omf_rc'
+require 'omf_rc/resource_factory'
+
+$stdout.sync = true
+options = {}
+executable_name = File.basename($PROGRAM_NAME)
+oml_enabled = false
+gem_version = Gem::Specification.find_by_name('omf_rc').version.to_s
+
+begin
+  oml_enabled = OML4R::init(ARGV, appName: executable_name) do |opts|
+    opts.banner = "OMF Resource Controller version '#{gem_version}'\n"
+    opts.banner += "Usage: #{executable_name} [options]"
+
+    opts.on("-c CONFIGFILE", "Configuration File") do |file|
+      options[:configfile] = file
+    end
+
+    opts.on("-a ADVANCED_CONFIGFILE", "Advanced Configuration File") do |file|
+      options[:advanced_configfile] = file
+    end
+
+    opts.on("-u URI", "Communication URI (xmpp://user:password@domain)") do |uri|
+      options[:uri] = uri
+    end
+
+    opts.on("-e ENVIRONMENT", "Environment (development, production ...)") do |environment|
+      options[:environment] = environment
+    end
+
+    opts.on("-i UID", "UID (and pubsub topic) of the resource, defaults to hostname") do |uid|
+      options[:uid] = uid
+    end
+
+    opts.on("-v", "--version", "Show version") do
+      puts "OMF Resource Controller version '#{gem_version}'"
+      exit
+    end
+
+    opts.on("-h", "--help", "Show this message") do
+      puts opts
+      exit
+    end
+  end
+rescue OML4R::MissingArgumentException => e
+  puts "Warning: #{e.message} to instrument this RC, so it will run without instrumentation. (see --oml-help)"
+rescue => e
+  puts e.message
+  exit(1)
+end
+
+if !options[:configfile].nil?
+  cfg_options = YAML.load(ERB.new(File.read(options[:configfile])).result)
+  options = cfg_options.merge(options)
+end
+
+if options[:resources].nil? || options[:resources].empty?
+  options[:uid] ||= Socket.gethostname
+  options[:resources] = [{ type: :node, uid: options[:uid] }]
+end
+
+OmfCommon::Measure.enable if oml_enabled
+
+options[:environment] ||= :development
+
+if options[:uri]
+  common_options = { communication: { url: options[:uri] } }
+else
+  common_options = {}
+end
+
+if !options[:advanced_configfile].nil?
+  a_cfg_options = (YAML.load_file(options[:advanced_configfile]))
+  common_options = a_cfg_options.merge(common_options)
+end
+
+unless common_options[:communication] && common_options[:communication][:url]
+  puts "Error: Missing parameters to connect to a PubSub Server (see --help)"
+  exit(1)
+end
+
+if options[:add_default_factories] != false
+  OmfRc::ResourceFactory.load_default_resource_proxies
+end
+
+if options[:factories]
+  options[:factories].each do |f|
+    if (req = f[:require])
+      begin
+        info "Try to load resource module '#{req}'"
+        require(req)
+      rescue LoadError => e
+        error e.message
+      end
+    end
+  end
+end
+
+if options[:auth]
+  if File.exist?(options[:auth][:entity_cert]) && File.exist?(options[:auth][:entity_key])
+    entity = OmfCommon::Auth::Certificate.create_from_x509(File.read(options[:auth][:entity_cert]),
+                                                           File.read(options[:auth][:entity_key]))
+  end
+end
+
+common_options[:communication][:auth] = {} if entity
+
+OmfCommon.init(options[:environment].to_sym, common_options) do |el|
+  info "Starting OMF Resource Controller version '#{gem_version}'"
+
+  OmfCommon.comm.on_connected do |comm|
+    info "Connected using #{comm.conn_info}"
+
+    if options[:auth] && options[:auth][:root_cert_dir]
+      OmfCommon::Auth::CertificateStore.instance.register_default_certs(options[:auth][:root_cert_dir])
+    end
+    OmfCommon::Auth::CertificateStore.instance.register(entity) if entity
+
+    options[:resources].each do |res_opts|
+      rtype = res_opts.delete(:type)
+      res_opts[:certificate] = entity if entity
+      begin
+        OmfRc::ResourceFactory.create(rtype, res_opts)
+      rescue => e
+        error "#{e.message}\n#{e.backtrace.join("\n")}"
+      end
+    end
+
+  end
+end
+info "Stopping OMF Resource Controller version '#{gem_version}'"

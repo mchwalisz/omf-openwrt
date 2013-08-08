@@ -1,0 +1,78 @@
+#!/usr/bin/env ruby
+BIN_DIR = File.dirname(File.symlink?(__FILE__) ? File.readlink(__FILE__) : __FILE__)
+TOP_DIR = File.join(BIN_DIR, '..')
+$: << File.join(TOP_DIR, 'lib')
+
+DESCR = %{
+Send a request to a specific resource (topic) and print out any replies.
+
+Any additional command line arguments are interpreted as limiting the request
+to those, otherwise all properties are requested.
+}
+
+require 'omf_common'
+
+OP_MODE = :development
+$timeout = 10
+
+opts = {
+  communication: {
+    #url: 'xmpp://srv.mytestbed.net'
+  },
+  eventloop: { type: :em},
+  logging: {
+    level: 'info'
+  }
+}
+
+resource_url = nil
+
+op = OptionParser.new
+op.banner = "Usage: #{op.program_name} [options] [prop1 prop2 ...]\n#{DESCR}\n"
+op.on '-r', '--resource-url URL', "URL of resource (e.g. xmpp://my.server.com/topic1)" do |url|
+  resource_url = url
+end
+op.on '-d', '--debug', "Set log level to DEBUG" do
+  opts[:logging][:level] = 'debug'
+end
+op.on_tail('-h', "--help", "Show this message") { $stderr.puts op; exit }
+req_properties = op.parse(ARGV) || []
+
+unless resource_url
+  $stderr.puts "ERROR: Missing --resource-url\n\n"
+  $stderr.puts op
+  exit(-1)
+end
+
+r = resource_url.split('/')
+resource = r.pop
+opts[:communication][:url] = r.join('/')
+
+def print_prop(name, value, level = 0)
+  print "  #{'  ' * level}#{name}:"
+  if value.is_a? Hash
+    puts ''
+    value.each {|k, v| print_prop(k, v, level + 1)}
+  else
+    puts " #{value}"
+  end
+end
+
+OmfCommon.init(OP_MODE, opts) do |el|
+  OmfCommon.comm.on_connected do |comm|
+    comm.subscribe(resource) do |topic|
+      topic.request(req_properties) do |msg|
+        if (src_topic = (msg.src.is_a?(OmfCommon::Comm::Topic) ? msg.src.id : msg.src)) == topic.id
+          puts "#{topic.id}"
+        else
+          puts "#{src_topic} via #{topic.id}"
+        end
+        msg.each_property do |name, value|
+          print_prop(name, value)
+        end
+        puts "-----------------"
+      end
+      el.after($timeout) { el.stop } if $timeout > 0
+    end
+  end
+end
