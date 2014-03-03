@@ -70,7 +70,15 @@ private
   end
 
   def fetch_spec(dep, all)
-    specs_and_sources, errors = Gem::SpecFetcher.fetcher.fetch_with_errors(dep, all, true, dep.prerelease?)
+    # Use the Ruby 2.0 RubyGems API if it's available
+    if Gem::SpecFetcher.fetcher.respond_to? :spec_for_dependency
+      specs_and_sources, errors =
+        Gem::SpecFetcher.fetcher.spec_for_dependency(dep, true)
+    else # Default to the 1.x API
+      specs_and_sources, errors =
+        Gem::SpecFetcher.fetcher.fetch_with_errors(dep, all, true, false)
+    end
+    # specs_and_sources, errors = Gem::SpecFetcher.fetcher.fetch_with_errors(dep, all, true, dep.prerelease?)
     print specs_and_sources
     if platform = Gem.platforms.last then
       filtered = specs_and_sources.select { |s,| s.platform == platform }
